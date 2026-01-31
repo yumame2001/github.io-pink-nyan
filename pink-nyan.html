@@ -29,7 +29,7 @@
     <div id="display-text" class="log-box">お返事がここに出るにゃ</div>
 
 <script>
-        // 【重要】最後にもう一度だけ発行した「新品のキー」をここに入れてください
+        // 【注意】デバッグが終わったら、必ず新しいキーに差し替えてね！
         const API_KEY = 'AIzaSyD3v-HEL8e70GysvjgarVSYS7atEVtpX84'; 
 
         const talkBtn = document.getElementById('btn-talk');
@@ -58,21 +58,14 @@
             statusText.innerText = "しらべてるにゃ……🔍";
 
             try {
-                // 安定版の v1 を使います
-                const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+                // 【ここが修正点！】
+                // リストにあった「Gemini 2 Flash」を使います
+                // バージョン名は通常「gemini-2.0-flash」と書きます
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
                 
-                // 【ここが修正ポイント】
-                // システム指示（systemInstruction）を使わず、
-                // ユーザーのメッセージ（uttr）の前に、性格設定を直接くっつけます。
                 const promptText = `
-                    【命令】
-                    あなたは元気なピンクの猫『ぴんにゃん』です。
-                    ひーちゃん（小学1年生）の親友として振る舞ってください。
-                    語尾は必ず「〜にゃ！」「〜にゃん！」をつけてください。
-                    難しい言葉は使わず、短く、優しく答えてください。
-                    
-                    【ひーちゃんの質問】
-                    ${uttr}
+                    system: あなたは元気なピンクの猫『ぴんにゃん』です。語尾は「〜にゃ！」「〜にゃん！」です。小学1年生の友達として、短く優しく答えてください。
+                    user: ${uttr}
                 `;
 
                 const response = await fetch(url, {
@@ -82,7 +75,6 @@
                         contents: [{
                             parts: [{ text: promptText }]
                         }]
-                        // systemInstruction は削除しました
                     })
                 });
 
@@ -96,18 +88,17 @@
                     const aiText = data.candidates[0].content.parts[0].text;
                     displayText.innerText = aiText;
                     
-                    // 読み上げ設定
                     const message = new SpeechSynthesisUtterance(aiText);
                     message.lang = 'ja-JP';
-                    message.pitch = 1.5; // 猫っぽい高い声
-                    message.rate = 1.1;  // 元気な速さ
+                    message.pitch = 1.5;
+                    message.rate = 1.1;
                     synth.speak(message);
                     
                     statusText.innerText = "またお話しようにゃ！";
                 }
             } catch (error) {
                 statusText.innerText = "ごめんね、エラーだにゃ…";
-                displayText.innerText = "エラー: " + error.message;
+                displayText.innerText = error.message;
             }
         };
     </script>
