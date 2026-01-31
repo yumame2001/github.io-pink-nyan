@@ -28,9 +28,9 @@
     <p id="status">ボタンをおしてね</p>
     <div id="display-text" class="log-box">お返事がここに出るにゃ</div>
 
-    <script>
-        // 【重要】新しく「再発行」したAPIキーを入れてください
-        const API_KEY = 'AIzaSyAhdYIr2PdHbY5hvIFMwpYYMAzaylDCZE4'; 
+<script>
+        // 【重要】最後にもう一度だけ発行した「新品のキー」をここに入れてください
+        const API_KEY = 'AIzaSyAYi9S0uKihS2kDix43z5w85o-9Guq2sMw'; 
 
         const talkBtn = document.getElementById('btn-talk');
         const statusText = document.getElementById('status');
@@ -39,6 +39,7 @@
 
         const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         recognition.lang = 'ja-JP';
+        
         const synth = window.speechSynthesis;
 
         talkBtn.onclick = () => {
@@ -57,43 +58,56 @@
             statusText.innerText = "しらべてるにゃ……🔍";
 
             try {
-                // v1beta を使用し、より詳細なリクエスト形式にします
+                // 安定版の v1 を使います
                 const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
                 
+                // 【ここが修正ポイント】
+                // システム指示（systemInstruction）を使わず、
+                // ユーザーのメッセージ（uttr）の前に、性格設定を直接くっつけます。
+                const promptText = `
+                    【命令】
+                    あなたは元気なピンクの猫『ぴんにゃん』です。
+                    ひーちゃん（小学1年生）の親友として振る舞ってください。
+                    語尾は必ず「〜にゃ！」「〜にゃん！」をつけてください。
+                    難しい言葉は使わず、短く、優しく答えてください。
+                    
+                    【ひーちゃんの質問】
+                    ${uttr}
+                `;
+
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         contents: [{
-                            role: "user",
-                            parts: [{ text: uttr }]
-                        }],
-                        systemInstruction: { 
-                            parts: [{ text: "君は元気なピンクの猫『ぴんにゃん』。ひーちゃんの親友。語尾は『にゃ！』。小学1年生にわかる言葉で短く答えて。装飾文字は使わない。" }] 
-                        }
+                            parts: [{ text: promptText }]
+                        }]
+                        // systemInstruction は削除しました
                     })
                 });
 
                 const data = await response.json();
 
                 if (!response.ok) {
-                    // エラーの内容を具体的に画面に出すようにしました
                     throw new Error(data.error ? data.error.message : "APIエラーだにゃ");
                 }
 
                 if (data.candidates && data.candidates[0].content) {
                     const aiText = data.candidates[0].content.parts[0].text;
                     displayText.innerText = aiText;
+                    
+                    // 読み上げ設定
                     const message = new SpeechSynthesisUtterance(aiText);
                     message.lang = 'ja-JP';
-                    message.pitch = 1.6;
+                    message.pitch = 1.5; // 猫っぽい高い声
+                    message.rate = 1.1;  // 元気な速さ
                     synth.speak(message);
+                    
                     statusText.innerText = "またお話しようにゃ！";
                 }
             } catch (error) {
                 statusText.innerText = "ごめんね、エラーだにゃ…";
-                displayText.innerText = "理由: " + error.message;
-                console.error("Error details:", error);
+                displayText.innerText = "エラー: " + error.message;
             }
         };
     </script>
