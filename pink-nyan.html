@@ -1,36 +1,6 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ぴんにゃんと おはなし</title>
-    <style>
-        body { background-color: #FFF5F7; font-family: sans-serif; text-align: center; padding: 20px; margin: 0; }
-        #mascot { font-size: 100px; margin: 20px 0; line-height: 1; }
-        #btn-talk { 
-            background: linear-gradient(135deg, #FF99CC 0%, #FF66B2 100%);
-            color: white; border: none; padding: 20px 30px; 
-            border-radius: 50px; font-size: 20px; cursor: pointer; 
-            box-shadow: 0 4px #d63384; width: 80%; max-width: 300px;
-        }
-        #status { color: #FF66B2; margin-top: 20px; font-weight: bold; }
-        .log-box { 
-            background: white; border-radius: 15px; padding: 15px; 
-            margin: 20px auto; border: 2px solid #FFC0CB; 
-            width: 90%; max-width: 500px; min-height: 80px; text-align: left;
-        }
-    </style>
-</head>
-<body>
-    <div id="mascot">🐱</div>
-    <h1 style="color: #FF1493; font-size: 20px;">ひーちゃん、なんでも きいてにゃ！</h1>
-    <button id="btn-talk">おはなし する（おしてにゃ）</button>
-    <p id="status">ボタンをおしてね</p>
-    <div id="display-text" class="log-box">お返事がここに出るにゃ</div>
-
 <script>
-        // 【注意】デバッグが終わったら、必ず新しいキーに差し替えてね！
-        const API_KEY = 'AIzaSyD3v-HEL8e70GysvjgarVSYS7atEVtpX84'; 
+        // さっきコピーしたGASのURLをここに貼る
+        const GAS_URL = 'https://script.google.com/macros/s/xxxxxxxxxxxxxxxxx/exec'; 
 
         const talkBtn = document.getElementById('btn-talk');
         const statusText = document.getElementById('status');
@@ -39,7 +9,6 @@
 
         const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         recognition.lang = 'ja-JP';
-        
         const synth = window.speechSynthesis;
 
         talkBtn.onclick = () => {
@@ -58,49 +27,28 @@
             statusText.innerText = "しらべてるにゃ……🔍";
 
             try {
-                // 【ここが修正点！】
-                // リストにあった「Gemini 2 Flash」を使います
-                // バージョン名は通常「gemini-2.0-flash」と書きます
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
-                
-                const promptText = `
-                    system: あなたは元気なピンクの猫『ぴんにゃん』です。語尾は「〜にゃ！」「〜にゃん！」です。小学1年生の友達として、短く優しく答えてください。
-                    user: ${uttr}
-                `;
-
-                const response = await fetch(url, {
+                // GASに送る（単純なPOST送信）
+                const response = await fetch(GAS_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [{ text: promptText }]
-                        }]
-                    })
+                    body: JSON.stringify({ text: uttr }) // 特別なヘッダーは不要
                 });
 
                 const data = await response.json();
+                const aiText = data.text;
 
-                if (!response.ok) {
-                    throw new Error(data.error ? data.error.message : "APIエラーだにゃ");
-                }
+                displayText.innerText = aiText;
+                
+                const message = new SpeechSynthesisUtterance(aiText);
+                message.lang = 'ja-JP';
+                message.pitch = 1.5;
+                message.rate = 1.1;
+                synth.speak(message);
+                
+                statusText.innerText = "またお話しようにゃ！";
 
-                if (data.candidates && data.candidates[0].content) {
-                    const aiText = data.candidates[0].content.parts[0].text;
-                    displayText.innerText = aiText;
-                    
-                    const message = new SpeechSynthesisUtterance(aiText);
-                    message.lang = 'ja-JP';
-                    message.pitch = 1.5;
-                    message.rate = 1.1;
-                    synth.speak(message);
-                    
-                    statusText.innerText = "またお話しようにゃ！";
-                }
             } catch (error) {
-                statusText.innerText = "ごめんね、エラーだにゃ…";
+                statusText.innerText = "通信エラーだにゃ";
                 displayText.innerText = error.message;
             }
         };
     </script>
-</body>
-</html>
