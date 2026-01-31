@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ぴんにゃんと おはなし</title>
+    <style>
+        body { background-color: #FFF5F7; font-family: 'Hiragino Kaku Gothic Pro', sans-serif; text-align: center; padding: 20px; }
+        #mascot { font-size: 120px; margin: 30px 0; display: block; }
+        #btn-talk { 
+            background: linear-gradient(135deg, #FF99CC 0%, #FF66B2 100%);
+            color: white; border: none; padding: 25px 50px; 
+            border-radius: 60px; font-size: 28px; cursor: pointer; 
+            box-shadow: 0 6px #d63384; transition: 0.2s;
+        }
+        #btn-talk:active { transform: translateY(4px); box-shadow: none; }
+        #status { color: #FF66B2; margin-top: 30px; font-size: 20px; font-weight: bold; }
+        .log-box { background: white; border-radius: 15px; padding: 15px; margin-top: 20px; border: 2px solid #FFC0CB; min-height: 50px; }
+    </style>
+</head>
+<body>
+    <div id="mascot">🐱</div> <h1 style="color: #FF1493;">ひーちゃん、なんでも きいてにゃ！</h1>
+    <button id="btn-talk">おはなし する（おしてにゃ）</button>
+    <p id="status">ボタンをおして しゃべってね！</p>
+    <div id="display-text" class="log-box">ここに お返事が 出るよ</div>
+
+    <script>
+        const API_KEY = 'AIzaSyArs_GGiSZbyDUSDzaedwANVAcXbfxLMPU';
+        const talkBtn = document.getElementById('btn-talk');
+        const statusText = document.getElementById('status');
+        const displayText = document.getElementById('display-text');
+
+        // 音声認識
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'ja-JP';
+
+        // 音声合成
+        const synth = window.speechSynthesis;
+
+        talkBtn.onclick = () => {
+            recognition.start();
+            statusText.innerText = "きいてるにゃ……👂";
+        };
+
+        recognition.onresult = async (event) => {
+            const uttr = event.results[0][0].transcript;
+            statusText.innerText = "しらべてるにゃ……🔍";
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: uttr }] }],
+                        tools: [{ "google_search_retrieval": {} }], // 検索機能
+                        system_instruction: { 
+                            parts: [{ text: "君は元気なピンクの猫『ぴんにゃん』。ひーちゃんの親友。語尾は『にゃ！』『にゃん！』。小学1年生にわかる言葉で、Google検索を使って正確に短く答えて。" }] 
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                const aiText = data.candidates[0].content.parts[0].text;
+                displayText.innerText = aiText;
+
+                // 読み上げ
+                const message = new SpeechSynthesisUtterance(aiText);
+                message.lang = 'ja-JP';
+                message.pitch = 1.6; // 猫っぽく高めの声
+                message.rate = 1.2;  // 元気に少し速め
+                synth.speak(message);
+                
+                statusText.innerText = "また おはなし しようにゃ！";
+            } catch (error) {
+                statusText.innerText = "ごめんね、エラーだにゃ…";
+                console.error(error);
+            }
+        };
+    </script>
+</body>
+</html>
