@@ -3,55 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ぴんにゃんと おはなしv2</title>
+    <title>ぴんにゃんと おはなし</title>
     <style>
-        /* ひーちゃん好みのピンクと丸みのあるデザイン */
-        body { background-color: #FFF5F7; font-family: 'Hiragino Kaku Gothic Pro', sans-serif; text-align: center; padding: 20px; margin: 0; }
-        #mascot { font-size: 120px; margin: 30px 0; display: block; line-height: 1; }
+        body { background-color: #FFF5F7; font-family: sans-serif; text-align: center; padding: 20px; margin: 0; }
+        #mascot { font-size: 100px; margin: 20px 0; line-height: 1; }
         #btn-talk { 
             background: linear-gradient(135deg, #FF99CC 0%, #FF66B2 100%);
-            color: white; border: none; padding: 25px 40px; 
-            border-radius: 60px; font-size: 24px; cursor: pointer; 
-            box-shadow: 0 6px #d63384; transition: 0.2s;
-            width: 80%; max-width: 300px;
+            color: white; border: none; padding: 20px 30px; 
+            border-radius: 50px; font-size: 20px; cursor: pointer; 
+            box-shadow: 0 4px #d63384; width: 80%; max-width: 300px;
         }
-        #btn-talk:active { transform: translateY(4px); box-shadow: none; }
-        #status { color: #FF66B2; margin-top: 25px; font-size: 18px; font-weight: bold; min-height: 1.5em; }
+        #status { color: #FF66B2; margin-top: 20px; font-weight: bold; }
         .log-box { 
-            background: white; border-radius: 20px; padding: 20px; 
+            background: white; border-radius: 15px; padding: 15px; 
             margin: 20px auto; border: 2px solid #FFC0CB; 
-            width: 90%; max-width: 500px; min-height: 100px;
-            box-sizing: border-box; text-align: left; line-height: 1.6;
+            width: 90%; max-width: 500px; min-height: 80px; text-align: left;
         }
     </style>
 </head>
 <body>
-
     <div id="mascot">🐱</div>
-    
-    <h1 style="color: #FF1493; font-size: 22px;">ひーちゃん、なんでも きいてにゃ！</h1>
-    
+    <h1 style="color: #FF1493; font-size: 20px;">ひーちゃん、なんでも きいてにゃ！</h1>
     <button id="btn-talk">おはなし する（おしてにゃ）</button>
-    
-    <p id="status">ボタンをおして しゃべってね！</p>
-    <div id="display-text" class="log-box">ここに お返事が 出るよ</div>
+    <p id="status">ボタンをおしてね</p>
+    <div id="display-text" class="log-box">お返事がここに出るにゃ</div>
 
     <script>
-        // 【重要】再発行したAPIキーをここに入れてください
-        const API_KEY = 'AIzaSyAhdYIr2PdHbY5hvIFMwpYYMAzaylDCZE4';
+        // 【重要】新しく「再発行」したAPIキーを入れてください
+        const API_KEY = 'AIzaSyAhdYIr2PdHbY5hvIFMwpYYMAzaylDCZE4'; 
 
         const talkBtn = document.getElementById('btn-talk');
         const statusText = document.getElementById('status');
         const displayText = document.getElementById('display-text');
-
         let isRecognizing = false;
 
-        // 音声認識（耳）の設定
         const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         recognition.lang = 'ja-JP';
-        recognition.interimResults = false;
-
-        // 音声合成（口）の設定
         const synth = window.speechSynthesis;
 
         talkBtn.onclick = () => {
@@ -60,10 +47,7 @@
                 recognition.start();
                 isRecognizing = true;
                 statusText.innerText = "きいてるにゃ……👂";
-            } catch (e) {
-                console.error("開始エラー:", e);
-                isRecognizing = false;
-            }
+            } catch (e) { isRecognizing = false; }
         };
 
         recognition.onend = () => { isRecognizing = false; };
@@ -71,43 +55,45 @@
         recognition.onresult = async (event) => {
             const uttr = event.results[0][0].transcript;
             statusText.innerText = "しらべてるにゃ……🔍";
-            displayText.innerText = "「" + uttr + "」だにゃ。ちょっとまってね…";
 
             try {
-                // v1 エンドポイントを使用
-                const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+                // v1beta を使用し、より詳細なリクエスト形式にします
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
                 
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: uttr }] }],
+                        contents: [{
+                            role: "user",
+                            parts: [{ text: uttr }]
+                        }],
                         system_instruction: { 
-                            parts: [{ text: "君は元気なピンクの猫『ぴんにゃん』。ひーちゃんの親友。語尾は『にゃ！』『にゃん！』。小学1年生にわかる言葉で短く答えて。マークダウン記法（**など）は禁止。" }] 
+                            parts: [{ text: "君は元気なピンクの猫『ぴんにゃん』。ひーちゃんの親友。語尾は『にゃ！』。小学1年生にわかる言葉で短く答えて。装飾文字は使わない。" }] 
                         }
                     })
                 });
 
-                if (!response.ok) throw new Error("APIエラーが発生したにゃ");
-
                 const data = await response.json();
-                
+
+                if (!response.ok) {
+                    // エラーの内容を具体的に画面に出すようにしました
+                    throw new Error(data.error ? data.error.message : "APIエラーだにゃ");
+                }
+
                 if (data.candidates && data.candidates[0].content) {
                     const aiText = data.candidates[0].content.parts[0].text;
                     displayText.innerText = aiText;
-
                     const message = new SpeechSynthesisUtterance(aiText);
                     message.lang = 'ja-JP';
-                    message.pitch = 1.6; // 高めのマスコットボイス
-                    message.rate = 1.1;
+                    message.pitch = 1.6;
                     synth.speak(message);
-                    statusText.innerText = "また おはなし しようにゃ！";
+                    statusText.innerText = "またお話しようにゃ！";
                 }
-
             } catch (error) {
-                statusText.innerText = "エラーだにゃ…";
-                displayText.innerText = "ごめんね、うまく動かなかったにゃ。もう一度ためしてね。";
-                console.error(error);
+                statusText.innerText = "ごめんね、エラーだにゃ…";
+                displayText.innerText = "理由: " + error.message;
+                console.error("Error details:", error);
             }
         };
     </script>
